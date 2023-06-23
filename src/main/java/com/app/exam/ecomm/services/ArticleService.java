@@ -36,11 +36,12 @@ public class ArticleService {
     public Article saveArticle(ArticleDTO updateArticle, Long articleId) {
         Article existingArticle = articleRepository.findById(articleId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
-        if (!existingArticle.getReference().equals(updateArticle.getDesignation())) {
+        if (!existingArticle.getReference().equals(updateArticle.getReference())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La référence de l’article ne peut pas être modifiée.");
         }
         existingArticle.setDesignation(updateArticle.getDesignation());
         existingArticle.setPrix(updateArticle.getPrix());
+        existingArticle.setQuantity(updateArticle.getQuantity());
         articleRepository.save(existingArticle);
         return existingArticle;
     }
