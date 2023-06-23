@@ -4,11 +4,11 @@ import com.app.exam.ecomm.config.JwtService;
 import com.app.exam.ecomm.controllers.dto.AuthenticationRequest;
 import com.app.exam.ecomm.controllers.dto.AuthenticationResponse;
 import com.app.exam.ecomm.controllers.dto.RegisterRequest;
+import com.app.exam.ecomm.controllers.dto.ResetPasswordRequest;
 import com.app.exam.ecomm.models.entity.Role;
 import com.app.exam.ecomm.models.entity.User;
 import com.app.exam.ecomm.repositories.RoleRepository;
 import com.app.exam.ecomm.repositories.UserRepository;
-import com.app.exam.ecomm.response.ErrorMessage;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import org.springframework.http.HttpStatus;
@@ -19,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
@@ -43,6 +44,8 @@ public class UserService {
     }
 
     public AuthenticationResponse register(@NonNull RegisterRequest request) {
+        Long roleIdValue = request.getRoleId() != null ? request.getRoleId() : 1L;
+        request.setRoleId(roleIdValue);
         Role role = roleRepository.findById(request.getRoleId())
                 .orElseThrow(() -> new RuntimeException("Role not found"));
         validateEmail(request.getEmail());
@@ -66,26 +69,41 @@ public class UserService {
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No user with this email"));
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
                         request.getPassword()
                 )
         );
-        var user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow();
         var jwtToken = jwtService.generateToken(user);
         return AuthenticationResponse.builder()
                 .accessToken(jwtToken)
+                .roleId(user.getRole().getId())
                 .build();
     }
 
-    public ResponseEntity<String> resetPassword(String newPassword) {
+    public ResponseEntity<String> resetPassword(ResetPasswordRequest resetPasswordRequest) {
         try {
-            User user = getAuthenticatedUser();
+            if (resetPasswordRequest.getEmail().isEmpty() || resetPasswordRequest.getOldPassword().isEmpty() || resetPasswordRequest.getNewPassword().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE)
+                        .body("The credentials are invalid!");
+            }
+            User user = userRepository.findByEmail(resetPasswordRequest.getEmail()).orElseThrow(() -> new RuntimeException("User not found"));
+            boolean isAuthenticated = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            resetPasswordRequest.getEmail(),
+                            resetPasswordRequest.getOldPassword()
+                    )
+            ).isAuthenticated();
+            if (!isAuthenticated) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("The credentials are invalid!");
+            }
 
             // Set the new password for the user
-            user.setPassword(passwordEncoder.encode(newPassword));
+            user.setPassword(passwordEncoder.encode(resetPasswordRequest.getNewPassword()));
             userRepository.save(user);
             return ResponseEntity.ok("Password reset successfully");
         } catch (Exception e) {

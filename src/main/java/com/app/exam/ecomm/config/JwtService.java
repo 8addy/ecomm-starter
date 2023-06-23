@@ -17,7 +17,7 @@ import java.util.function.Function;
 @Service
 public class JwtService {
     private static final String SECRET_KEY = "xJP3iN7j4tKyoFX/r4b23jRXfx0lsXuuXc2Cg55H8al8k5dUWHYpadmhu72+VzJlDkfqBqH7D+4T6oRnBZybpqF/rMK/0CDnLmlEE5X3y3fTpuC8mFu3/MZBh/nr3A87iS+ZE/8u9HMLMeyx/mZoaYnWAYTa+DXhlts4bpImHIEFI7cLXX8V5acvHZsXbAa8oOvewyR67Bb4rWQoSRYT+/YJYKZLIB9JyysrArrGY/XEmNaKT66tQOI32RjoR63WJYk36Nb24t6tz+5nMo5AgtNXiMj4+UVYnzvMZCTRqHTKmGeZVvxWdZT5BBHJgVzLaQtF0aAKqkuYpk4+xm9L2s4AOIkf998i+uTTzG5j+s4=";
-    private long refreshExpiration = 1000 * 60 * 24;
+    private long tokenExpiration = 86400 * 1000;
 
     public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -54,7 +54,7 @@ public class JwtService {
                 .setClaims(extraClaims)
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + refreshExpiration))
+                .setExpiration(new Date(System.currentTimeMillis() + tokenExpiration))
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }

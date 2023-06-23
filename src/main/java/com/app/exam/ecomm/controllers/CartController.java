@@ -21,9 +21,8 @@ public class CartController {
         return ResponseEntity.ok(cart);
     }
 
-    @PostMapping("/{id}")
+    @PostMapping(value = {"/", "/{id}"})
     public ResponseEntity<?> addToCart(@PathVariable(name = "id", required = false) Integer id, @RequestBody AddToCartRequest request) {
-        System.out.println("++> " + request);
         return cartService.addToCart(id, request);
     }
 }

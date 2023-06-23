@@ -6,6 +6,7 @@ import com.app.exam.ecomm.controllers.dto.RegisterRequest;
 import com.app.exam.ecomm.controllers.dto.ResetPasswordRequest;
 import com.app.exam.ecomm.services.UserService;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,8 +31,9 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
+    @ResponseBody
     public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest) {
-        return userService.resetPassword(resetPasswordRequest.getNewPassword());
+        return userService.resetPassword(resetPasswordRequest);
     }
 }
 

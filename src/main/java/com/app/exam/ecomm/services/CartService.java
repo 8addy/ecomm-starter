@@ -54,28 +54,61 @@ public class CartService {
             cart = cartRepository.save(cart);
         }
 
-        List<ArticlesCart> articlesCart = request.getArticlesCart();
+        List<ArticlesCart> reqArticlesCart = request.getArticlesCart();
 
-        // Set the cartId for each ArticlesCart entity
-        for (ArticlesCart currArticle : articlesCart) {
-            // Check if the articles quanity is available in stock
-            Optional<Article> optionalArticle = articleRepository.findByIdAndDeletedFalse(currArticle.getArticle().getId());
-            if (optionalArticle.isPresent()) {
-                Article article = optionalArticle.get();
-                if (currArticle.getQuantity() > article.getQuantity()) {
-                    throw new IllegalArgumentException("The requested quantity exceeds the available stock. Please choose a lower quantity for Article: " + article.getId());
-                } else {
+        if(cartId != null) {
+            List<ArticlesCart> oldArticlesCart = articlesCartRepository.finByCartIdAndPendingTrue(cartId);
+            for (ArticlesCart currArticle : reqArticlesCart) {
+                Optional<Article> optionalArticle = articleRepository.findByIdAndDeletedFalse(currArticle.getArticle().getId());
+                if(optionalArticle.isPresent()) {
+                    Article article = optionalArticle.get();
+                    // Get the article card if exist, if not create new one
+                    Integer currArticleId = currArticle.getId() != null ? currArticle.getId() : 0;
+                    Optional<ArticlesCart> optionalOldArticlesCart = oldArticlesCart.stream()
+                            .filter(arCart -> currArticleId.equals(arCart.getId()))
+                            .findFirst();
+                    if (optionalOldArticlesCart.isPresent()) {
+                        ArticlesCart articleCart = optionalOldArticlesCart.get();
+                        currArticle.setId(articleCart.getId());
+                        // check if new quantity is different than old one, if yes update it
+                        if (articleCart.getQuantity() != currArticle.getQuantity()) {
+                            if (articleCart.getQuantity() >= currArticle.getQuantity()) {
+                                var quantitySub = articleCart.getQuantity() - currArticle.getQuantity();
+                                article.setQuantity(article.getQuantity() + quantitySub);
+                            } else {
+                                var quantitySub = currArticle.getQuantity() - articleCart.getQuantity();
+                                article.setQuantity(article.getQuantity() - quantitySub);
+                            }
+                        }
+                        currArticle.setCartId(cart.getId());
+                    } else {
+                        if (currArticle.getQuantity() > article.getQuantity()) {
+                            throw new IllegalArgumentException("The requested quantity exceeds the available stock. Please choose a lower quantity for Article: " + article.getId());
+                        }
+                        currArticle.setCartId(cart.getId());
+                        currArticle.setArticle(article);
+                        currArticle.setPending(true);
+                        article.setQuantity(article.getQuantity() - currArticle.getQuantity());
+                    }
+                    articleRepository.save(article);
+                } else throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found with ID: " + currArticle.getArticle().getId());
+            }
+        } else {
+            for (ArticlesCart currArticle : reqArticlesCart) {
+                Optional<Article> optionalArticle = articleRepository.findByIdAndDeletedFalse(currArticle.getArticle().getId());
+                if(optionalArticle.isPresent()) {
+                    Article article = optionalArticle.get();
                     currArticle.setCartId(cart.getId());
+                    currArticle.setArticle(article);
+                    currArticle.setPending(true);
                     article.setQuantity(article.getQuantity() - currArticle.getQuantity());
                     articleRepository.save(article);
-                }
-            } else {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found with ID: " + currArticle.getArticle().getId());
+                } else throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found with ID: " + currArticle.getArticle().getId());
             }
         }
 
-        // Save the list of ArticlesCart entities
-        articlesCartRepository.saveAll(request.getArticlesCart());
+        articlesCartRepository.saveAll(reqArticlesCart);
         return ResponseEntity.ok(cart);
+        
     }
 }
