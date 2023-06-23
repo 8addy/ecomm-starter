@@ -109,6 +109,6 @@ public class CartService {
 
         articlesCartRepository.saveAll(reqArticlesCart);
         return ResponseEntity.ok(cart);
-        
+
     }
 }
