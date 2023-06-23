@@ -25,4 +25,9 @@ public class CartController {
     public ResponseEntity<?> addToCart(@PathVariable(name = "id", required = false) Integer id, @RequestBody AddToCartRequest request) {
         return cartService.addToCart(id, request);
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteArticleCart(@PathVariable(name = "id") Integer id) {
+        return cartService.deleteArticleCart(id);
+    }
 }

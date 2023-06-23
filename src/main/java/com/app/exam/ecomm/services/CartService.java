@@ -107,7 +107,15 @@ public class CartService {
             }
         }
 
-        articlesCartRepository.saveAll(reqArticlesCart);
+        List<ArticlesCart> articlesCartList = articlesCartRepository.saveAll(reqArticlesCart);
+        cart.setArticlesCart(articlesCartList);
         return ResponseEntity.ok(cart);
+    }
+
+    public ResponseEntity<?> deleteArticleCart(Integer id) {
+        articlesCartRepository.deleteById(id);
+        User user = userService.getAuthenticatedUser();
+        Optional<Cart> cart = cartRepository.findActiveCartWithPendingArticlesByUserId(user.getId());
+        return ResponseEntity.status(HttpStatus.OK).body(cart);
     }
 }
